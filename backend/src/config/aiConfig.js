@@ -1,0 +1,1 @@
+export const AI_MODEL = process.env.OLLAMA_MODEL || "gemma:2b";
