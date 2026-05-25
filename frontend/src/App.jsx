@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import { copyToClipboard } from './utils/copyToClipboard'
 import { downloadTextFile } from './utils/downloadTextFile';
+import { API_BASE_URL, BANNER_TIMEOUT } from './config/appConfig.js';
+import { useHealthCheck } from './hooks/useHealthCheck.js';
+import { useNetworkStatus } from './hooks/useNetworkStatus.js';
+import { useGenerateContent } from './hooks/useGenerateContent.js';
+import { useLocalStorage  } from './hooks/useLocalStorage.js';
 import LoadingSpinner from './components/LoadingSpinner';
 import Card from './components/Card';
 import SuccessBanner from './components/SuccessBanner';
@@ -10,75 +15,31 @@ import OfflineSetup from './components/OfflineSetup';
 import OnlineSetup from './components/OnlineSetup';
 import './App.css'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
 function App() {
   const [inputText, setInputText] = useState("");
-  const [output, setOutput] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
-  const [error, setError] = useState("");
   const [darkMode, setDarkMode] = useState(false);
   const [fileName, setFileName] = useState("");
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [activeTab, setActiveTab] = useState("summary");
-  const [lastAction, setLastAction] = useState(null);
-  const [backendStatus, setBackendStatus] = useState("checking");
-  const [ollamaStatus, setOllamaStatus] = useState("checking");
-  const [mode, setMode] = useState(
-    localStorage.getItem("studyFlow-mode")
-  );
-  const [setupComplete, setSetupComplete] = useState(
-    localStorage.getItem("studyFlow-offline-setup")
-  );
-  const [onlineSetupComplete, setOnlineSetupComplete] = useState(
-    localStorage.getItem("studyFlow-online-setup")
-  );
+
+  const isOnline = useNetworkStatus();
+  const { backendStatus, ollamaStatus } = useHealthCheck();
+  const {
+    output, setOutput,
+    loading,
+    errorMessage, setErrorMessage,
+    successMessage, setSuccessMessage,
+    lastAction,
+    generateContent,  
+  } = useGenerateContent();
+
+  const [mode, setMode] = useLocalStorage("learnLoop-mode");
+  const [setupComplete, setSetupComplete] = useLocalStorage("learnLoop-offline-setup");
+  const [onlineSetupComplete, setOnlineSetupComplete] = useLocalStorage("learnLoop-online-setup");
   
+  // Dark mode toggle
   useEffect(() => {
     document.body.className = darkMode ? "dark" : "";
   }, [darkMode]);
-  
-  useEffect(() => {
-    const goOnline = () => setIsOnline(true);
-    const goOffline = () => setIsOnline(false);
-    window.addEventListener("online", goOnline);
-    window.addEventListener("offline", goOffline);
-    return () => {
-      window.removeEventListener("online", goOnline);
-      window.removeEventListener("offline", goOffline);
-    };
-  }, []);
-
-//  Success message auto-removal after 3 seconds
-  useEffect(() => {
-    if (!successMessage) return;
-    const timer = setTimeout(() => {
-        setSuccessMessage("");
-    }, 3000);
-    return () => clearTimeout(timer);
-}, [successMessage]);
-
-  // Startup health check
-  useEffect(() => {
-  const checkBackend = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/health`);
-      if (!response.ok) {
-        throw new Error();
-      }
-      const data = await response.json();
-      console.log("Health Check:", data);
-      setBackendStatus("online");
-      setOllamaStatus(data.ollama === "connected" ? "online" : "offline");
-
-    } catch(error) {
-      console.error("Health Check Failed:", error);
-      setBackendStatus("offline");
-    }
-  };
-  checkBackend();
-}, []);
   
   // Conditional render for onboard screen
   if (!mode) {
@@ -109,54 +70,12 @@ function App() {
     reader.readAsText(file);    // reading file as a text
   };
 
-  const handleGenerate = async () => {
-    if (!inputText.trim()) {
-      setError("Please enter or upload text first.");
-      return;
-    };
-
-    setLoading(true);
-    setSuccessMessage("");
-    setError("");
-    setOutput(null);
-    setLastAction(() => handleGenerate);
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/generate`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text: inputText,
-          mode,
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || "Something went wrong");
-      };
-
-      setOutput(data);
-      setSuccessMessage("Generated successfully!");
-      setLastAction(null);
-
-    } catch (err) {
-      setError(err.message);
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleClear = () => {
     setInputText("");
     setOutput(null);
-    setError("");
+    setErrorMessage("");
     setSuccessMessage("");
     setFileName("");
-    setLastAction(null);
   }
 
   return (
@@ -197,7 +116,7 @@ function App() {
             onChange={(e) => setInputText(e.target.value)}
           />
           <div className="button-group">
-            <button onClick={handleGenerate} disabled={loading}>
+            <button onClick={() => generateContent(inputText, mode)} disabled={loading}>
               {loading ? "Generating" : "Generate"}
             </button>
             {loading && <LoadingSpinner/>}
@@ -212,8 +131,8 @@ function App() {
         </div>
 
         {successMessage && (<SuccessBanner message={successMessage}/>)}
-        {error && (
-          <ErrorBanner message={error} onClick={lastAction} disabled={loading}/>
+        {errorMessage && (
+          <ErrorBanner message={errorMessage} onClick={lastAction} disabled={loading}/>
         )}
 
         <div className="tabs">
@@ -290,9 +209,9 @@ function App() {
       </main>
       <footer>
         <button disabled={loading} onClick={() => {
-          localStorage.removeItem("studyFlow-mode");
-          localStorage.removeItem("studyFlow-offline-setup");
-          localStorage.removeItem("studyFlow-online-setup");
+          localStorage.removeItem("learnLoop-mode");
+          localStorage.removeItem("learnLoop-offline-setup");
+          localStorage.removeItem("learnLoop-online-setup");
           window.location.reload();
         }}>
           Change AI mode
@@ -303,4 +222,4 @@ function App() {
   );
 }
 
-export default App
+export default App;
