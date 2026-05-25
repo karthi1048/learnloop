@@ -8,9 +8,9 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       manifest: {
-        name: "AI Study Assistant",
-        short_name: "StudyAI",
-        description: "Offline-friendly learning companion powered by Gemma 4",
+        name: "LearnLoop",
+        short_name: "LearnLoop",
+        description: "Offline-first AI study assistant powered by Gemma models",
         theme_color: "#1f2937",
         background_color: "#f5f7fb",
         display: "standalone",
@@ -20,13 +20,13 @@ export default defineConfig({
             "src": "/icon-192.png",
             "sizes": "192x192",
             "type": "image/png",
-            // "purpose": "maskable"
+            "purpose": "maskable"
           },
           {
             "src": "/icon-512.png",
             "sizes": "512x512",
             "type": "image/png",
-            // "purpose": "maskable"
+            "purpose": "maskable"
           },
         ],
       },

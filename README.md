@@ -67,7 +67,7 @@ ollama run gemma:2b
 ```bash
 cd backend
 npm install
-npm run dev
+node server.js
 ```
 ### Environment Variables
 

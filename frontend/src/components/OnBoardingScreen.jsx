@@ -9,18 +9,22 @@ import { GiBrain } from 'react-icons/gi'
 export default function OnBoardingScreen({ setMode }) {
     
     const chooseMode = (selectedMode) => {
-        localStorage.setItem("studyFlow-mode", selectedMode);
+        localStorage.setItem("learnLoop-mode", selectedMode);
 
-        if (selectedMode == "offline") {
-            localStorage.setItem("studyFlow-offline-setup", "false");
+        if (selectedMode === "offline") {
+            localStorage.setItem("learnLoop-offline-setup", "false");
         };
+        if (selectedMode === "online") {
+            localStorage.setItem("learnLoop-online-setup","false");  
+        }
         setMode(selectedMode);
     }
 
     return (
         <div className="onboarding">
-            {/* <h1>Welcome to StudyFlow</h1> */}
-            <h1>
+            {/* Plan: Intend to use icons here */}
+            {/* Example icons below */}
+            {/* <h1>
                 <HiSparkles/>
                 <HiOutlineBookOpen/>
                 <HiOutlineDocumentText/>
@@ -35,8 +39,9 @@ export default function OnBoardingScreen({ setMode }) {
                 <PiCards/>
                 <PiExam/>
                 <GiBrain/>
-            </h1>
-            <p>Choose how you want to use AI.</p>
+            </h1> */}
+            <h1>LearnLoop</h1>
+            <p>Choose how you want LearnLoop to run.</p>
             <div className="mode-card">
                 <h2>Offline Mode</h2>
                 <p>Run Gemma AI locally using Ollama.</p>

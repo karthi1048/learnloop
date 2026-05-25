@@ -1,9 +1,8 @@
-
 export default function LoadingSpinner() {
     return (
         <div className="spinner-wrapper">
             <div className="spinner"></div>
-            <p>Generating AI response...</p>
+            <p>Generating your study content...</p>
         </div>
     );
 }

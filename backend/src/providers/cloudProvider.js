@@ -1,21 +1,16 @@
 import axios from "axios";
+import { OPENROUTER_URL, PRIMARY_CLOUD_MODEL, FALLBACK_CLOUD_MODEL, REQUEST_TIMEOUT } from "../config/appConfig.js";
 
-const MODELS = [
-    // model check
-    "google/gemma-4-26b-a4b-it:free",
-    
-    // fallback
-    "google/gemma-4-31b-it:free",
-];
+const MODELS = [ PRIMARY_CLOUD_MODEL, FALLBACK_CLOUD_MODEL ];
 
 export async function generateWithCloud(prompt) {
 
-    let lastError = null;
+    let lastError = null; // to store retrieved error
 
     for (const model of MODELS) {
         try {
             console.log(`Trying cloud model: ${model}`);
-            const response = await axios.post("https://openrouter.ai/api/v1/chat/completions", {
+            const response = await axios.post(OPENROUTER_URL, {
                 model,
                 messages: [
                     {
@@ -29,10 +24,12 @@ export async function generateWithCloud(prompt) {
                     Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
                     "Content-Type": "application/json",
                 },
+                timeout: REQUEST_TIMEOUT,     // Timeout Protection
             }
         );
     
         const content = response.data?.choices?.[0]?.message?.content;
+        // Validation
         if (!content || content.trim().length < 5) {
             throw new Error("Empty cloud response.");
         }
@@ -44,6 +41,9 @@ export async function generateWithCloud(prompt) {
             lastError = error;
             console.error(`Cloud model failed: ${model}`, error.response?.data || error.message);    
         };
+
+        // Continue to next Fallback model
     }
-    throw new Error("Cloud AI is currently busy. Please try again later or use Offline Mode.");
+    // preserve original provider error
+    throw lastError;
 }

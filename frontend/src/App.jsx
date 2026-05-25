@@ -10,6 +10,8 @@ import OfflineSetup from './components/OfflineSetup';
 import OnlineSetup from './components/OnlineSetup';
 import './App.css'
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 function App() {
   const [inputText, setInputText] = useState("");
   const [output, setOutput] = useState(null);
@@ -20,6 +22,9 @@ function App() {
   const [fileName, setFileName] = useState("");
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [activeTab, setActiveTab] = useState("summary");
+  const [lastAction, setLastAction] = useState(null);
+  const [backendStatus, setBackendStatus] = useState("checking");
+  const [ollamaStatus, setOllamaStatus] = useState("checking");
   const [mode, setMode] = useState(
     localStorage.getItem("studyFlow-mode")
   );
@@ -44,6 +49,36 @@ function App() {
       window.removeEventListener("offline", goOffline);
     };
   }, []);
+
+//  Success message auto-removal after 3 seconds
+  useEffect(() => {
+    if (!successMessage) return;
+    const timer = setTimeout(() => {
+        setSuccessMessage("");
+    }, 3000);
+    return () => clearTimeout(timer);
+}, [successMessage]);
+
+  // Startup health check
+  useEffect(() => {
+  const checkBackend = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/health`);
+      if (!response.ok) {
+        throw new Error();
+      }
+      const data = await response.json();
+      console.log("Health Check:", data);
+      setBackendStatus("online");
+      setOllamaStatus(data.ollama === "connected" ? "online" : "offline");
+
+    } catch(error) {
+      console.error("Health Check Failed:", error);
+      setBackendStatus("offline");
+    }
+  };
+  checkBackend();
+}, []);
   
   // Conditional render for onboard screen
   if (!mode) {
@@ -83,9 +118,11 @@ function App() {
     setLoading(true);
     setSuccessMessage("");
     setError("");
+    setOutput(null);
+    setLastAction(() => handleGenerate);
 
     try {
-      const response = await fetch("http://localhost:5000/generate", {
+      const response = await fetch(`${API_BASE_URL}/generate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -96,17 +133,18 @@ function App() {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to generate.");
-      }
-
       const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "Something went wrong");
+      };
+
       setOutput(data);
       setSuccessMessage("Generated successfully!");
+      setLastAction(null);
 
     } catch (err) {
+      setError(err.message);
       console.error(err);
-      setError("Something went wrong.")
     } finally {
       setLoading(false);
     }
@@ -114,10 +152,11 @@ function App() {
 
   const handleClear = () => {
     setInputText("");
-    setOutput("");
+    setOutput(null);
     setError("");
     setSuccessMessage("");
     setFileName("");
+    setLastAction(null);
   }
 
   return (
@@ -127,6 +166,12 @@ function App() {
         <p>Offline-friendly learning companion powered by Gemma</p>
         <p className='mode'>
           {isOnline ? "Online Mode" : "Offline Mode"}
+        </p>
+        <p className={`backend-status ${backendStatus}`}>
+          Backend: {backendStatus}
+        </p>
+        <p className={`backend-status ${ollamaStatus}`}>
+          Ollama: {ollamaStatus}
         </p>
       </header>
       <main>
@@ -153,8 +198,9 @@ function App() {
           />
           <div className="button-group">
             <button onClick={handleGenerate} disabled={loading}>
-              {loading ? <LoadingSpinner/> : "Generate"}
+              {loading ? "Generating" : "Generate"}
             </button>
+            {loading && <LoadingSpinner/>}
             <button onClick={handleClear} disabled={loading} className='secondary-btn'>
               Clear
             </button>
@@ -165,8 +211,10 @@ function App() {
           </div>
         </div>
 
-        {successMessage && (<SuccessBanner message={setSuccessMessage}/>)}
-        {error && (<ErrorBanner message={setError}/>)}
+        {successMessage && (<SuccessBanner message={successMessage}/>)}
+        {error && (
+          <ErrorBanner message={error} onClick={lastAction} disabled={loading}/>
+        )}
 
         <div className="tabs">
           <button onClick={() => setActiveTab("summary")}>
@@ -204,7 +252,7 @@ function App() {
                       Copy Quiz
                     </button>
                     <button onClick={() => downloadTextFile("quiz.txt", output.quiz.join("\n"))}>
-                      Export Summary
+                      Export Quiz
                     </button>
                   </Card>
                 )}
@@ -241,7 +289,7 @@ function App() {
         </div>
       </main>
       <footer>
-        <button onClick={() => {
+        <button disabled={loading} onClick={() => {
           localStorage.removeItem("studyFlow-mode");
           localStorage.removeItem("studyFlow-offline-setup");
           localStorage.removeItem("studyFlow-online-setup");

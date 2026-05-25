@@ -380,3 +380,17 @@ footer {
     font-size: 2rem;
   }
 }
+
+/* health status */
+.backend-status {
+  font-size: 0.9rem;
+  margin-top: 6px;
+}
+
+.backend-status.online {
+  color: limegreen;
+}
+
+.backend-status.offline {
+  color: red;
+}

@@ -1,5 +1,5 @@
 import ollama from "ollama";
-import { AI_MODEL } from "../config/aiConfig.js";
+import { AI_MODEL } from "../config/appConfig.js";
 
 export async function generateWithOllama(prompt) {
 

@@ -1,6 +1,9 @@
 import { getProvider } from "./providers/providerFactory.js";
+// import { summaryPrompt } from "./prompts/summaryPrompt.js";
+// import { quizPrompt } from "./prompts/quizPrompt.js";
 
 export async function generateSummary(text, mode = "offline") {
+    // const prompt = summaryPrompt;
     const prompt = `
     You are a study assistant.
 
@@ -22,7 +25,7 @@ export async function generateSummary(text, mode = "offline") {
 
     // cleanup & validation
     if (!summary || summary.trim().length < 20) {
-        throw new Error("AI generation for summary failed. Please try again.");
+        throw new Error("Empty summary response from AI Provider.");
     }
     summary = summary.replace(/sure.*summary[:]?/i, "");
     summary = summary.replace(/here.*summary[:]?/i, "");
@@ -31,6 +34,7 @@ export async function generateSummary(text, mode = "offline") {
 }
 
 export async function generateQuiz(text, mode = "offline") {
+    // const prompt = quizPrompt;
     const prompt = `
     You are a study assistant.
 
@@ -48,10 +52,10 @@ export async function generateQuiz(text, mode = "offline") {
     `;
 
     const provider = getProvider(mode);
-    const summary = await provider(prompt);
+    const response = await provider(prompt);
 
     // Post-processing Output
-    let content = summary.trim();
+    let content = response.trim();
 
     // splits text wherever there is a newline
     const lines = content.split("\n");  // array
@@ -64,7 +68,7 @@ export async function generateQuiz(text, mode = "offline") {
     );
 
     if (questions.length === 0) {
-        throw new Error("Quiz generation failed. Please try again.");
+        throw new Error("Empty quiz response from AI Provider.");
     }
 
     return questions;

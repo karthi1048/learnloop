@@ -1,7 +1,10 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { generateQuiz, generateSummary} from "./src/aiService.js";
+import { generateQuiz, generateSummary } from "./src/aiService.js";
+import { normalizeAIError } from "./src/utils/errorHandler.js";
+import { checkOllama } from "./src/utils/checkOllama.js";
+import { PORT } from "./src/config/appConfig.js";
 // import { parseFlashcards } from "./src/utils/Parser.js";
 
 dotenv.config();
@@ -12,6 +15,17 @@ app.use(cors());
 app.use(express.json());
 
 // API Route
+app.get("/health", async (req, res) => {
+    const ollamaRunning = await checkOllama();
+    console.log("Ollama Health:", ollamaRunning);
+    res.json({
+        status: "ok",
+        server: "running",
+        ollama: ollamaRunning ? "connected" : "disconnected",
+        timestamp: new Date().toISOString(),
+    });
+});
+
 app.post("/generate", async (req, res) => {
     try {
         const { text, mode } = req.body;
@@ -25,6 +39,7 @@ app.post("/generate", async (req, res) => {
 
         const summary = await generateSummary(text, mode);
         const quiz = await generateQuiz(text, mode);
+        // NOTE: flashcard is future improvement(not yet implemented.)
         // const flashcard = await generateFlashcards(text);
     
         res.json({
@@ -37,10 +52,16 @@ app.post("/generate", async (req, res) => {
         console.log(`Generation took ${end - start}ms`);
 
     } catch (error) {
-        console.error(error);
+        const normalizedError = normalizeAIError(error);
+        console.error({
+            type: normalizedError.type,
+            message: normalizedError.message,
+            status: normalizedError.status,
+        });
 
-        res.status(500).json({
-            error: "AI generation failed",
+        res.status(normalizedError.status).json({
+            type: normalizedError.type,
+            message: normalizedError.message,
         });
     }
 });
@@ -56,7 +77,7 @@ app.post("/generate", async (req, res) => {
 
 // setFlashcards(parsed);
 
-const PORT = 5000;
+// const PORT = PORT;
 
 app.listen(PORT, () => {
     console.log(`server running ${PORT}`);
