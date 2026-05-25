@@ -20,15 +20,28 @@ export default defineConfig({
             "src": "/icon-192.png",
             "sizes": "192x192",
             "type": "image/png",
-            "purpose": "maskable"
+            "purpose": "any maskable"
           },
           {
             "src": "/icon-512.png",
             "sizes": "512x512",
             "type": "image/png",
-            "purpose": "maskable"
+            "purpose": "any maskable"
           },
         ],
+        screenshots: [
+          {
+            src: "/screenshots/desktop.png",
+            sizes: "1895x910",
+            type: "image/png",
+            form_factor: "wide"
+          },
+          {
+            src: "/screenshots/mobile.png",
+            sizes: "1440x2960",
+            type: "image/png"
+          }
+        ]
       },
     }),
   ],

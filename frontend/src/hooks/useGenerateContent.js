@@ -59,7 +59,7 @@ export function useGenerateContent() {
 
         } catch (err) {
             setErrorMessage(err.message);
-            console.errorMessage(err);
+            console.error(err);
         } finally {
             setLoading(false);
         }
